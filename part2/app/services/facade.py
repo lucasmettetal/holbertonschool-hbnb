@@ -1,6 +1,7 @@
 from app.persistence.repository import InMemoryRepository
 from app.models.user import User
 from app.models.amenity import Amenity
+from app.models.place import Place
 
 class HBnBFacade:
     def __init__(self):
@@ -58,7 +59,70 @@ class HBnBFacade:
         amenity.update(amenity_data)
         return amenity
 
-    # Placeholder method for fetching a place by ID
+    def create_place(self, place_data):
+        owner_id = place_data.get("owner_id")
+        owner = self.get_user(owner_id)
+        if not owner:
+            raise ValueError("Owner not found")
+
+        amenity_ids = place_data.get("amenities", [])
+        amenities = []
+        for aid in amenity_ids:
+            amenity = self.get_amenity(aid)
+            if not amenity:
+                raise ValueError("Amenity not found")
+            amenities.append(amenity)
+
+        place = Place(
+            title=place_data.get('title'),
+            description=place_data.get("description"),
+            price=place_data.get("price"),
+            latitude=place_data.get("latitude"),
+            longitude=place_data.get("longitude"),
+            owner=owner
+        )
+
+        for a in amenities:
+            place.add_amenity(a)
+
+        self.place_repo.add(place)
+        return place
+
     def get_place(self, place_id):
-        # Logic will be implemented in later tasks
-        pass
+        return self.place_repo.get(place_id)
+
+    def get_all_places(self):
+        return self.place_repo.get_all()
+
+    def update_place(self, place_id, place_data):
+        place = self.get_place(place_id)
+        if not place:
+            return None
+
+        place_data.pop("id", None)
+        place_data.pop("created_at", None)
+        place_data.pop("updated_at", None)
+
+        if "owner_id" in place_data:
+            owner = self.get_user(place_data["owner_id"])
+            if not owner:
+                raise ValueError("Owner not found")
+            place.owner = owner
+            place_data.pop("owner_id", None)
+
+        if "amenities" in place_data:
+            amenities = []
+            for aid in place_data["amenities"]:
+                amenity = self.get_amenity(aid)
+                if not amenity:
+                    raise ValueError("Amenity not found")
+                amenities.append(amenity)
+
+            place.amenities = amenities
+            place.save()
+            place_data.pop("amenities", None)
+
+        allowed = {"title", "description", "price", "latitude", "longitude"}
+        safe_data = {k: v for k, v in place_data.items() if isinstance(k, str) and k in allowed}
+        place.update(place_data)
+        return place
