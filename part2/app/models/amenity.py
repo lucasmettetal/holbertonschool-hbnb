@@ -12,10 +12,8 @@ class Amenity(BaseModel):
 
     @name.setter
     def name(self, value):
-        if not value:
+        if not isinstance(value, str) or not value.strip():
             raise ValueError("name is required")
-        if not isinstance(value, str):
-            raise ValueError("name must be string")
         v = value.strip()
         if len(v) > 50:
             raise ValueError("name must be at most 50 characters")

@@ -38,7 +38,7 @@ class Place(BaseModel):
             return
         if not isinstance(value, str):
             raise ValueError("description must be a string")
-        self._description = value
+        self._description = value.strip()
 
     @property
     def price(self):
@@ -87,6 +87,7 @@ class Place(BaseModel):
     def owner(self, value):
         if not isinstance(value, User):
             raise ValueError("owner must be an User instance")
+        self._owner = value
 
     def add_review(self, review):
         self.reviews.append(review)
