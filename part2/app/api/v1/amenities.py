@@ -10,13 +10,17 @@ amenity_model = api.model('Amenity', {
 
 @api.route('/')
 class AmenityList(Resource):
-    @api.expect(amenity_model)
+    @api.expect(amenity_model, validate=True)
     @api.response(201, 'Amenity successfully created')
     @api.response(400, 'Invalid input data')
     def post(self):
         """Register a new amenity"""
         amenity_data = api.payload
-        new_amenity = facade.create_amenity(amenity_data)
+        try:
+            new_amenity = facade.create_amenity(amenity_data)
+        except ValueError as e:
+            return {'error': str(e)}, 400
+
         return {'id': new_amenity.id, 'name': new_amenity.name}, 201
 
     @api.response(200, 'List of amenities retrieved successfully')
