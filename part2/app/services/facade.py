@@ -2,6 +2,7 @@ from app.persistence.repository import InMemoryRepository
 from app.models.user import User
 from app.models.amenity import Amenity
 from app.models.place import Place
+from app.models.review import Review
 
 class HBnBFacade:
     def __init__(self):
@@ -124,5 +125,72 @@ class HBnBFacade:
 
         allowed = {"title", "description", "price", "latitude", "longitude"}
         safe_data = {k: v for k, v in place_data.items() if isinstance(k, str) and k in allowed}
-        place.update(place_data)
+        place.update(safe_data)
         return place
+
+    def create_review(self, review_data):
+        user = self.get_user(review_data["user_id"])
+        if not user:
+            raise ValueError("User not found")
+
+        place = self.get_place(review_data["place_id"])
+        if not place:
+            raise ValueError("Place not found")
+
+        review = Review(
+            text=review_data["text"],
+            rating=review_data["rating"],
+            place=place,
+            user=user
+        )
+
+        self.review_repo.add(review)
+
+        place.add_review(review)
+        place.save()
+
+        return review
+
+
+    def get_review(self, review_id):
+        return self.review_repo.get(review_id)
+
+
+    def get_all_reviews(self):
+        return self.review_repo.get_all()
+
+
+    def get_reviews_by_place(self, place_id):
+        place = self.get_place(place_id)
+        if not place:
+            return None
+        return place.reviews
+
+
+    def update_review(self, review_id, review_data):
+        review = self.get_review(review_id)
+        if not review:
+            return None
+
+        review_data.pop("id", None)
+        review_data.pop("created_at", None)
+        review_data.pop("updated_at", None)
+        review_data.pop("user_id", None)
+        review_data.pop("place_id", None)
+
+        review.update(review_data)
+        return review
+
+
+    def delete_review(self, review_id):
+        review = self.get_review(review_id)
+        if not review:
+            return False
+
+        place = review.place
+        if place and hasattr(place, "reviews"):
+            place.reviews = [r for r in place.reviews if r.id != review_id]
+            place.save()
+
+        self.review_repo.delete(review_id)
+        return True
