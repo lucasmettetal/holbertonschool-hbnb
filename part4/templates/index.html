@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="HBnB - Discover and book amazing places">
+    <link rel="icon" href="{{ url_for('static', filename='icon.png') }}" type="image/png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>HBnB - Home</title>
+</head>
+
+<body>
+    <header>
+        <div class="header-container">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="HBnB Logo" class="logo">
+            <nav>
+                <a href="index.html">Home</a>
+                <a href="login.html" id="login-link" class="login-button">Login</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="places-section">
+            <h1>Welcome to HBnB</h1>
+            <p class="subtitle">Discover amazing places to stay</p>
+
+            <div id="error-message"
+                style="display: none; color: #FF5A5F; margin-bottom: 20px; padding: 12px; background-color: #FFE0E0; border-radius: 6px; text-align: center; font-weight: 500;">
+            </div>
+
+            <div style="margin-bottom: 20px; text-align: center;">
+                <label for="price-filter" style="margin-right: 10px; font-weight: 500;">Filter by Max Price:</label>
+                <select id="price-filter"
+                    style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; cursor: pointer;">
+                    <option value="all">All Prices</option>
+                    <option value="10">Up to $10</option>
+                    <option value="50">Up to $50</option>
+                    <option value="100">Up to $100</option>
+                </select>
+            </div>
+
+            <div id="places-list" class="places-container">
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>All rights reserved.</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+</body>
+
+</html>
