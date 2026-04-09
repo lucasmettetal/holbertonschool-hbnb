@@ -1,26 +1,27 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="HBnB - Discover and book amazing places">
+    <meta name="description" content="HBnB - Découvrez et réservez des logements d'exception">
     <link rel="icon" href="{{ url_for('static', filename='icon.png') }}" type="image/png">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
-    <title>HBnB - Home</title>
+    <title>HBnB - Accueil</title>
 </head>
 
 <body>
     <header>
         <div class="header-container">
-            <a href="index.html" class="brand" aria-label="HBnB Home">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="HBnB Logo" class="logo">
+            <a href="index.html" class="brand" aria-label="HBnB Accueil">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo HBnB" class="logo">
             </a>
-            <nav class="main-nav">
-                <a href="index.html" class="nav-home">Home</a>
-            </nav>
+            <div class="header-spacer"></div>
             <div class="header-actions">
-                <a href="login.html" id="login-link" class="login-button">Login</a>
+                <a href="{{ url_for('serve_create_place') }}" id="create-place-link" class="login-button" style="background-color: #16A34A; display: none;">+ Ajouter une annonce</a>
+                <a href="{{ url_for('serve_register') }}" id="register-link" class="login-button" style="background-color: #6B7280;">S'inscrire</a>
+                <a href="{{ url_for('serve_login') }}" id="login-link" class="login-button">Se connecter</a>
+                <a href="#" id="logout-link" class="login-button" style="background-color: #6B7280; display: none;">Déconnexion</a>
             </div>
         </div>
     </header>
@@ -28,77 +29,77 @@
     <main>
         <section class="hero-section container">
             <div class="hero-copy">
-                <p class="eyebrow">Handpicked stays across Europe</p>
-                <h1>Discover premium places to stay</h1>
-                <p class="subtitle">Search refined rentals, compare details quickly and find your next stay with less friction.</p>
+                <p class="eyebrow">Des hébergements soigneusement sélectionnés</p>
+                <h1>Découvrez des logements d'exception</h1>
+                <p class="subtitle">Explorez des locations de qualité, comparez les détails rapidement et trouvez votre prochain séjour sans effort.</p>
             </div>
 
             <div id="error-message"
-                style="display: none; color: #FF5A5F; margin-bottom: 20px; padding: 12px; background-color: #FFE0E0; border-radius: 6px; text-align: center; font-weight: 500;">
+                style="display: none; color: #2F6FED; margin-bottom: 20px; padding: 12px; background-color: rgba(47, 111, 237, 0.1); border-radius: 6px; text-align: center; font-weight: 500;">
             </div>
 
             <div class="booking-shell">
-                <div class="booking-bar" role="search" aria-label="Booking search">
+                <div class="booking-bar" role="search" aria-label="Recherche de séjour">
                     <div class="booking-field field-destination">
                         <label for="search-input">Destination</label>
                         <input id="search-input" class="booking-input" type="search"
-                            placeholder="City, listing, description" aria-label="Destination search">
+                            placeholder="Ville, annonce, description" aria-label="Recherche de destination">
                     </div>
 
                     <div class="booking-field field-checkin">
-                        <label for="check-in-date">Check-in</label>
-                        <input id="check-in-date" class="booking-input" type="date" aria-label="Check-in date">
+                        <label for="check-in-date">Arrivée</label>
+                        <input id="check-in-date" class="booking-input" type="date" aria-label="Date d'arrivée">
                     </div>
 
                     <div class="booking-field field-checkout">
-                        <label for="check-out-date">Check-out</label>
-                        <input id="check-out-date" class="booking-input" type="date" aria-label="Check-out date">
+                        <label for="check-out-date">Départ</label>
+                        <input id="check-out-date" class="booking-input" type="date" aria-label="Date de départ">
                     </div>
 
                     <div class="booking-field field-travelers">
-                        <label for="travelers-select">Travelers</label>
-                        <select id="travelers-select" class="booking-input" aria-label="Number of travelers">
-                            <option value="1">1 traveler</option>
-                            <option value="2">2 travelers</option>
-                            <option value="3">3 travelers</option>
-                            <option value="4">4 travelers</option>
-                            <option value="5+">5+ travelers</option>
+                        <label for="travelers-select">Voyageurs</label>
+                        <select id="travelers-select" class="booking-input" aria-label="Nombre de voyageurs">
+                            <option value="1">1 voyageur</option>
+                            <option value="2">2 voyageurs</option>
+                            <option value="3">3 voyageurs</option>
+                            <option value="4">4 voyageurs</option>
+                            <option value="5+">5+ voyageurs</option>
                         </select>
                     </div>
 
                     <div class="booking-action">
-                        <button id="booking-search-btn" type="button" class="booking-search-button">Search</button>
+                        <button id="booking-search-btn" type="button" class="booking-search-button">Rechercher</button>
                     </div>
                 </div>
 
                 <div class="filter-rail">
                     <p id="nights-count" class="nights-count" aria-live="polite"></p>
 
-                    <div class="quick-filters" aria-label="Quick amenities filters">
+                    <div class="quick-filters" aria-label="Filtres rapides par équipements">
                         <button type="button" class="quick-filter-chip" data-amenity="Wifi">Wifi</button>
-                        <button type="button" class="quick-filter-chip" data-amenity="Pool">Pool</button>
+                        <button type="button" class="quick-filter-chip" data-amenity="Piscine">Piscine</button>
                         <button type="button" class="quick-filter-chip" data-amenity="Parking">Parking</button>
-                        <button type="button" class="quick-filter-chip" data-amenity="Air conditioning">Air conditioning</button>
-                        <button type="button" class="quick-filter-chip" data-amenity="Balcony">Balcony</button>
-                        <button type="button" class="quick-filter-chip" data-amenity="Pets allowed">Pets allowed</button>
+                        <button type="button" class="quick-filter-chip" data-amenity="Climatisation">Climatisation</button>
+                        <button type="button" class="quick-filter-chip" data-amenity="Balcon">Balcon</button>
+                        <button type="button" class="quick-filter-chip" data-amenity="Animaux acceptés">Animaux acceptés</button>
                     </div>
 
                     <div class="quick-filters-panel">
-                        <label for="price-filter" class="filter-label">Max price</label>
+                        <label for="price-filter" class="filter-label">Prix maximum</label>
                         <select id="price-filter" class="filter-select">
-                            <option value="all">All prices</option>
-                            <option value="50">Up to $50</option>
-                            <option value="100">Up to $100</option>
-                            <option value="200">Up to $200</option>
-                            <option value="350">Up to $350</option>
+                            <option value="all">Tous les prix</option>
+                            <option value="50">Jusqu'à 50 $</option>
+                            <option value="100">Jusqu'à 100 $</option>
+                            <option value="200">Jusqu'à 200 $</option>
+                            <option value="350">Jusqu'à 350 $</option>
                         </select>
                     </div>
                 </div>
             </div>
 
             <div class="section-heading">
-                <h2>Featured listings</h2>
-                <p>Curated rentals with clear pricing, quick details and premium presentation.</p>
+                <h2>Annonces à la une</h2>
+                <p>Des locations sélectionnées avec des tarifs clairs, des détails rapides et une présentation soignée.</p>
             </div>
 
             <div id="places-list" class="places-grid">
@@ -107,7 +108,7 @@
     </main>
 
     <footer>
-        <p>All rights reserved.</p>
+        <p>Tous droits réservés.</p>
     </footer>
 
     <script src="{{ url_for('static', filename='scripts.js') }}"></script>

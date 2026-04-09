@@ -42,3 +42,11 @@ dist/
 # Temporary files
 *.swp
 *.swo
+# Uploaded images
+part4/static/uploads/
+part3/static/uploads/
+part2/static/uploads/
+
+# Development database
+part4/instance/development.db
+part3/instance/development.db

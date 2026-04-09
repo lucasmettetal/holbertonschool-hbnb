@@ -8,6 +8,7 @@ class Amenity(BaseModel):
     name = db.Column(db.String(50), nullable=False)
 
     def __init__(self, name, **kwargs):
+        super().__init__(**kwargs)
         self.name = name.strip()
 
     def to_dict(self):

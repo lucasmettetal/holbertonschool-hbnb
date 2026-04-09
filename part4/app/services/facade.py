@@ -88,6 +88,7 @@ class HBnBFacade:
             latitude=place_data["latitude"],
             longitude=place_data["longitude"],
             owner=owner,
+            image_url=place_data.get("image_url"),
         )
 
         for amenity in amenities:

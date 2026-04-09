@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="HBnB - Créer un compte">
+    <link rel="icon" href="{{ url_for('static', filename='icon.png') }}" type="image/png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>HBnB - S'inscrire</title>
+</head>
+
+<body>
+    <header>
+        <div class="header-container">
+            <a href="index.html" class="brand" aria-label="HBnB Accueil">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo HBnB" class="logo">
+            </a>
+            <div class="header-spacer"></div>
+            <div class="header-actions">
+                <a href="{{ url_for('serve_register') }}" id="register-link" class="login-button">S'inscrire</a>
+                <a href="{{ url_for('serve_login') }}" id="login-link" class="login-button" style="background-color: #6B7280;">Se connecter</a>
+                <a href="#" id="logout-link" class="login-button" style="background-color: #6B7280; display: none;">Déconnexion</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="login-section">
+            <div class="login-container">
+                <h1>Créer un compte</h1>
+
+                <div id="error-message" style="display: none; color: #2F6FED; margin-bottom: 20px; padding: 12px; background-color: rgba(47, 111, 237, 0.1); border-radius: 6px; text-align: center; font-weight: 500;"></div>
+
+                <div id="success-message" style="display: none; color: #16A34A; margin-bottom: 20px; padding: 12px; background-color: rgba(22, 163, 74, 0.1); border-radius: 6px; text-align: center; font-weight: 500;"></div>
+
+                <form class="form" id="register-form" method="POST" action="#">
+                    <div class="form-group">
+                        <label for="first_name">Prénom</label>
+                        <input type="text" id="first_name" name="first_name" required placeholder="Tapez votre prénom">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="last_name">Nom</label>
+                        <input type="text" id="last_name" name="last_name" required placeholder="Tapez votre nom">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="email">Adresse email</label>
+                        <input type="email" id="email" name="email" required placeholder="Tapez votre email">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="password">Mot de passe</label>
+                        <input type="password" id="password" name="password" required placeholder="Choisissez un mot de passe">
+                    </div>
+
+                    <button type="submit" class="submit-button">Créer un compte</button>
+                </form>
+
+                <p class="signup-link">Vous avez déjà un compte ? <a href="{{ url_for('serve_login') }}">Se connecter ici</a></p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Tous droits réservés.</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+</body>
+
+</html>

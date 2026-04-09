@@ -1,52 +1,52 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="HBnB - Place Details">
+    <meta name="description" content="HBnB - Détails du logement">
     <link rel="icon" href="{{ url_for('static', filename='icon.png') }}" type="image/png">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <title>HBnB - Place Details</title>
+    <title>HBnB - Détails du logement</title>
 </head>
 
 <body>
     <header>
         <div class="header-container">
-            <a href="index.html" class="brand" aria-label="HBnB Home">
-                <img src="{{ url_for('static', filename='logo.png') }}" alt="HBnB Logo" class="logo">
+            <a href="index.html" class="brand" aria-label="HBnB Accueil">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo HBnB" class="logo">
             </a>
-            <nav class="main-nav">
-                <a href="index.html" class="nav-home">Home</a>
-            </nav>
+            <div class="header-spacer"></div>
             <div class="header-actions">
-                <a href="login.html" class="login-button">Login</a>
+                <a href="{{ url_for('serve_create_place') }}" id="create-place-link" class="login-button" style="background-color: #16A34A; display: none;">+ Ajouter une annonce</a>
+                <a href="{{ url_for('serve_login') }}" id="login-link" class="login-button">Se connecter</a>
+                <a href="#" id="logout-link" class="login-button" style="background-color: #6B7280; display: none;">Déconnexion</a>
             </div>
         </div>
     </header>
 
     <main>
         <div id="error-message"
-            style="display: none; color: #FF5A5F; margin-bottom: 24px; padding: 14px 18px; background-color: #FFE8E8; border-radius: 12px; text-align: center; font-weight: 500;">
+            style="display: none; color: #2F6FED; margin-bottom: 24px; padding: 14px 18px; background-color: rgba(47, 111, 237, 0.1); border-radius: 12px; text-align: center; font-weight: 500;">
         </div>
 
         <section id="place-details" class="place-details"></section>
 
         <section id="add-review" style="display: none;">
             <div class="review-action">
-                <p class="review-action-title">Share your experience</p>
-                <p class="review-action-sub">Stayed here? Let other travelers know what you thought.</p>
+                <p class="review-action-title">Partagez votre expérience</p>
+                <p class="review-action-sub">Vous avez logé ici ? Dites aux voyageurs ce que vous en avez pensé.</p>
                 <a id="add-review-link" href="add_review.html" class="details-button"
                     style="display: inline-flex; text-decoration: none;">
-                    Write a Review
+                    Ajouter un avis
                 </a>
             </div>
         </section>
     </main>
 
     <footer>
-        <p>All rights reserved.</p>
+        <p>Tous droits réservés.</p>
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

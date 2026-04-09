@@ -19,6 +19,7 @@ class Review(BaseModel):
     user = db.relationship("User", backref="reviews")
 
     def __init__(self, text, rating, place, user, **kwargs):
+        super().__init__(**kwargs)
         self.text = text.strip()
         self.rating = int(rating)
 

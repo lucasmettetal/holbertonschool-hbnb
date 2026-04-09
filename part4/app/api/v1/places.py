@@ -17,7 +17,8 @@ place_model = api.model('Place', {
     ),
     'amenities': fields.List(
         fields.String, description="List of amenities IDs"
-    )
+    ),
+    'image_url': fields.String(description='URL of the place image')
 })
 
 place_update_model = api.model('PlaceUpdate', {
@@ -28,7 +29,8 @@ place_update_model = api.model('PlaceUpdate', {
     'longitude': fields.Float(description='Longitude of the place'),
     'amenities': fields.List(
         fields.String, description="List of amenities IDs"
-    )
+    ),
+    'image_url': fields.String(description='URL of the place image')
 })
 
 
@@ -44,11 +46,16 @@ class PlaceList(Resource):
         place_data = api.payload
         current_user = get_jwt_identity()
 
+        print(f"[CREATE PLACE] Data received: {place_data}")
+        print(f"[CREATE PLACE] image_url in payload: {place_data.get('image_url')}")
+
         place_data["owner_id"] = current_user
 
         try:
             new_place = facade.create_place(place_data)
+            print(f"[CREATE PLACE] Place created with image_url: {new_place.image_url}")
         except ValueError as e:
+            print(f"[CREATE PLACE] Error: {str(e)}")
             return {"error": str(e)}, 400
 
         return new_place.to_dict(), 201

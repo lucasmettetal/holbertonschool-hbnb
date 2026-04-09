@@ -6,16 +6,21 @@ from app.extensions import db
 class BaseModel(db.Model):
     __abstract__ = True
 
-    id = db.Column(db.String(36), primary_key=True)
-    created_at = db.Column(db.DateTime)
-    updated_at = db.Column(db.DateTime)
-
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime,
         default=datetime.utcnow,
         onupdate=datetime.utcnow
     )
+
+    def __init__(self, **kwargs):
+        # UUID généré immédiatement à l'instanciation Python
+        # (le default SQLAlchemy ne s'exécute qu'au INSERT en base)
+        self.id = kwargs.get('id') or str(uuid.uuid4())
+        now = datetime.utcnow()
+        self.created_at = kwargs.get('created_at', now)
+        self.updated_at = kwargs.get('updated_at', now)
 
     def save(self):
         self.updated_at = datetime.utcnow()

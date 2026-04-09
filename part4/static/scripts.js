@@ -2,7 +2,12 @@
 
 const API_BASE_URL = 'http://127.0.0.1:5000/api/v1';
 const LOGIN_ENDPOINT = `${API_BASE_URL}/auth/login`;
+const REGISTER_ENDPOINT = `${API_BASE_URL}/auth/register`;
 const PLACES_ENDPOINT = `${API_BASE_URL}/places/`;
+const AMENITIES_ENDPOINT = `${API_BASE_URL}/amenities/`;
+
+// Cache for amenity lookups (UUID -> name)
+let amenityCache = {};
 
 /* ===== COOKIE HELPERS ===== */
 
@@ -85,7 +90,7 @@ async function loginUser(email, password) {
     }
 
     if (!response.ok) {
-      const errorMessage = data.message || 'Login failed. Please check your credentials.';
+      const errorMessage = data.message || 'Erreur de connexion. Veuillez vérifier vos identifiants.';
       displayError(errorMessage);
       return;
     }
@@ -93,15 +98,15 @@ async function loginUser(email, password) {
     const token = data.access_token || data.token;
 
     if (!token) {
-      displayError('No token received from server.');
+      displayError('Aucun jeton reçu du serveur.');
       return;
     }
 
-    setCookie('token', token);
+    setCookie('access_token', token);
     window.location.href = 'index.html';
   } catch (error) {
     console.error('Login error:', error);
-    displayError('Network error. Please try again.');
+    displayError('Erreur réseau. Veuillez réessayer.');
   }
 }
 
@@ -120,7 +125,7 @@ function initLoginPage() {
     const passwordInput = document.getElementById('password');
 
     if (!emailInput || !passwordInput) {
-      displayError('Form elements not found.');
+      displayError('Éléments du formulaire non trouvés.');
       return;
     }
 
@@ -128,7 +133,7 @@ function initLoginPage() {
     const password = passwordInput.value.trim();
 
     if (!email || !password) {
-      displayError('Email and password are required.');
+      displayError('L\'email et le mot de passe sont obligatoires.');
       return;
     }
 
@@ -228,7 +233,7 @@ const FALLBACK_IMAGES = [
   'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1400&q=80'
 ];
 
-const BADGES = [null, null, null, null, 'Guest favorite', 'Top rated', 'New'];
+const BADGES = [null, null, null, null, 'Favori des voyageurs', 'Très bien noté', 'Nouveau'];
 
 const REVIEWER_NAMES = [
   'Sarah', 'James', 'Amelia', 'Oliver', 'Isabella', 'Liam',
@@ -320,14 +325,14 @@ function pickRandomAmenities() {
 function createListingDetail(maxGuests) {
   const bedrooms = 1 + Math.floor(Math.random() * 3);
   const areaOptions = [
-    'City center',
-    'Near metro',
-    'Quiet street',
-    'Close to river',
-    'Historic district'
+    'Centre-ville',
+    'Près du métro',
+    'Rue calme',
+    'Près de la rivière',
+    'Quartier historique'
   ];
 
-  return `${maxGuests} guests · ${bedrooms} bedroom${bedrooms > 1 ? 's' : ''} · ${pickRandomItem(areaOptions)}`;
+  return `${maxGuests} voyageur${maxGuests > 1 ? 's' : ''} · ${bedrooms} chambre${bedrooms > 1 ? 's' : ''} · ${pickRandomItem(areaOptions)}`;
 }
 
 function randomDateOffset(baseDate, minDays, maxDays) {
@@ -381,6 +386,41 @@ function generateRandomPlaces(count = 20) {
   return generatedPlaces;
 }
 
+function isUUID(str) {
+  // UUID v4 pattern: 8-4-4-4-12 hexadecimal digits
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidPattern.test(str);
+}
+
+function getAmenityName(amenityId) {
+  // Check if it's in the cache
+  if (amenityCache[amenityId]) {
+    return amenityCache[amenityId];
+  }
+  // Return generic label for unknown UUIDs
+  return 'Équipement';
+}
+
+async function preloadAmenitiesCache() {
+  try {
+    const response = await fetch(AMENITIES_ENDPOINT);
+    if (!response.ok) {
+      console.warn('Could not preload amenities cache');
+      return;
+    }
+    const amenities = await response.json();
+    if (Array.isArray(amenities)) {
+      amenities.forEach(amenity => {
+        if (amenity.id && amenity.name) {
+          amenityCache[amenity.id] = amenity.name;
+        }
+      });
+    }
+  } catch (err) {
+    console.warn('Error preloading amenities:', err);
+  }
+}
+
 function normalizeAmenities(amenities) {
   if (!Array.isArray(amenities)) {
     return [];
@@ -388,12 +428,19 @@ function normalizeAmenities(amenities) {
 
   return amenities
     .map((amenity) => {
-      if (typeof amenity === 'string') {
-        return amenity;
-      }
-
+      // If it's an object with a name property, use that
       if (amenity && typeof amenity === 'object') {
         return amenity.name || amenity.label || amenity.title || '';
+      }
+
+      // If it's a string
+      if (typeof amenity === 'string') {
+        // If it's a UUID, look it up in cache
+        if (isUUID(amenity)) {
+          return getAmenityName(amenity);
+        }
+        // Otherwise return the string as-is (it's likely already a readable name)
+        return amenity;
       }
 
       return '';
@@ -404,13 +451,13 @@ function normalizeAmenities(amenities) {
 function normalizePlace(place) {
   return {
     id: place.id || generateRandomId(),
-    name: place.name || 'Unnamed place',
-    city: place.city || place.location || 'Unknown location',
+    name: place.name || place.title || 'Logement sans titre',
+    city: place.city || place.location || 'Ville inconnue',
     price: place.price_by_night ?? place.price ?? null,
-    description: place.description || 'No description available',
+    description: place.description || 'Aucune description disponible',
     details: place.details || place.detail || place.short_detail || place.summary || null,
     amenities: normalizeAmenities(place.amenities),
-    image: place.image || place.image_url || place.photo || pickFallbackImage(),
+    image: place.image_url || place.image || place.photo || pickFallbackImage(),
     rating: place.rating ?? null,
     host: place.host || place.host_name || place.owner || null,
     maxGuests: place.maxGuests || place.max_guests || null,
@@ -494,21 +541,38 @@ function applyFilters() {
 
 
 function checkAuthentication() {
-  const loginLink = document.getElementById('login-link');
-  const token = getCookie('token');
+  const token = getCookie('access_token');
 
-  if (loginLink) {
-    loginLink.style.display = token ? 'none' : 'inline-block';
+  const loginLink = document.getElementById('login-link');
+  const registerLink = document.getElementById('register-link');
+  const createPlaceLink = document.getElementById('create-place-link');
+  const logoutLink = document.getElementById('logout-link');
+
+  if (token) {
+    if (loginLink) loginLink.style.display = 'none';
+    if (registerLink) registerLink.style.display = 'none';
+    if (createPlaceLink) createPlaceLink.style.display = 'inline-block';
+    if (logoutLink) logoutLink.style.display = 'inline-block';
+  } else {
+    if (loginLink) loginLink.style.display = 'inline-block';
+    if (registerLink) registerLink.style.display = 'inline-block';
+    if (createPlaceLink) createPlaceLink.style.display = 'none';
+    if (logoutLink) logoutLink.style.display = 'none';
   }
 
   return token;
+}
+
+function logout() {
+  document.cookie = 'access_token=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/';
+  window.location.href = 'index.html';
 }
 
 async function fetchPlaces() {
   try {
     clearError();
 
-    const token = getCookie('token');
+    const token = getCookie('access_token');
     const headers = {};
 
     if (token) {
@@ -521,7 +585,7 @@ async function fetchPlaces() {
     });
 
     if (!response.ok) {
-      displayError(`Failed to load places: ${response.status}`);
+      displayError(`Erreur au chargement des logements: ${response.status}`);
       return;
     }
 
@@ -529,7 +593,7 @@ async function fetchPlaces() {
     try {
       data = await response.json();
     } catch (error) {
-      displayError('Invalid server response.');
+      displayError('Réponse du serveur invalide.');
       return;
     }
 
@@ -561,7 +625,7 @@ async function fetchPlaces() {
     applyFilters();
   } catch (error) {
     console.error('Error fetching places:', error);
-    displayError('Network error. Unable to load places.');
+    displayError('Erreur réseau. Impossible de charger les logements.');
   }
 }
 
@@ -575,7 +639,7 @@ function displayPlaces(places) {
   placesList.innerHTML = '';
 
   if (!places || places.length === 0) {
-    placesList.innerHTML = '<p style="grid-column: 1 / -1; text-align:center; padding:40px; color:#717171;">No places found.</p>';
+    placesList.innerHTML = '<p style="grid-column: 1 / -1; text-align:center; padding:40px; color:#717171;">Aucun logement trouvé.</p>';
     return;
   }
 
@@ -590,20 +654,20 @@ function displayPlaces(places) {
     const rawAmenities = normalizeAmenities(place.amenities);
     const amenities = rawAmenities.slice(0, 3);
     const extraAmenities = Math.max(0, rawAmenities.length - amenities.length);
-    const image = place.image || pickFallbackImage();
+    const image = place.image_url || place.image || pickFallbackImage();
     const ratingValue = place.rating || '4.8';
-    const detail = place.details || place.detail || place.description || '2 guests · 1 bedroom · City center';
+    const detail = place.details || place.detail || place.description || '2 voyageurs · 1 chambre · Centre-ville';
 
     const amenitiesMarkup = amenities.length > 0
-      ? `${amenities.map(function (amenity) { return `<span class="amenity-pill">${amenity}</span>`; }).join('')}${extraAmenities > 0 ? `<span class="amenity-more">+${extraAmenities} more</span>` : ''}`
-      : '<span class="amenity-more">No amenities listed</span>';
+      ? `${amenities.map(function (amenity) { return `<span class="amenity-pill">${amenity}</span>`; }).join('')}${extraAmenities > 0 ? `<span class="amenity-more">+${extraAmenities} autre${extraAmenities > 1 ? 's' : ''}</span>` : ''}`
+      : '<span class="amenity-more">Aucun équipement renseigné</span>';
 
     const availabilityLine = (place.availableFrom && place.availableTo)
-      ? `<p class="availability-line">Available ${place.availableFrom} – ${place.availableTo}</p>`
+      ? `<p class="availability-line">Disponible ${place.availableFrom} – ${place.availableTo}</p>`
       : '';
 
     const maxGuestsLine = place.maxGuests
-      ? `<p class="max-guests-line">Up to ${place.maxGuests} guest${place.maxGuests > 1 ? 's' : ''}</p>`
+      ? `<p class="max-guests-line">Jusqu'à ${place.maxGuests} voyageur${place.maxGuests > 1 ? 's' : ''}</p>`
       : '';
 
     const badgeHtml = place.badge
@@ -625,11 +689,11 @@ function displayPlaces(places) {
           <p class="listing-detail">${detail}</p>
           ${maxGuestsLine}
           <div class="price-row">
-            <p class="price">$${price}<span class="price-unit"> / night</span></p>
+            <p class="price">$${price}<span class="price-unit"> / nuit</span></p>
           </div>
           <div class="amenities-preview">${amenitiesMarkup}</div>
           ${availabilityLine}
-          <span class="details-button">View Details</span>
+          <span class="details-button">Voir les détails</span>
         </div>
       </a>
     `;
@@ -693,7 +757,7 @@ function setupBookingDates() {
       const oneDay = 24 * 60 * 60 * 1000;
       const nights = Math.round((end - start) / oneDay);
 
-      nightsCount.textContent = nights > 0 ? `${nights} night${nights > 1 ? 's' : ''} selected` : '';
+      nightsCount.textContent = nights > 0 ? `${nights} nuit${nights > 1 ? 's' : ''} sélectionnée${nights > 1 ? 's' : ''}` : '';
     } else if (nightsCount) {
       nightsCount.textContent = '';
     }
@@ -771,7 +835,7 @@ function getPlaceIdFromURL() {
 
 function checkAuthenticationPlace() {
   const addReviewSection = document.getElementById('add-review');
-  const token = getCookie('token');
+  const token = getCookie('access_token');
 
   if (addReviewSection) {
     addReviewSection.style.display = token ? 'block' : 'none';
@@ -822,7 +886,7 @@ async function fetchPlaceDetails(token, placeId) {
     });
 
     if (!response.ok) {
-      useFallbackOrError(placeId, `Place not found (${response.status}).`);
+      useFallbackOrError(placeId, `Logement non trouvé (${response.status}).`);
       return;
     }
 
@@ -830,7 +894,7 @@ async function fetchPlaceDetails(token, placeId) {
     try {
       data = await response.json();
     } catch (error) {
-      useFallbackOrError(placeId, 'Invalid server response.');
+      useFallbackOrError(placeId, 'Réponse du serveur invalide.');
       return;
     }
 
@@ -847,7 +911,7 @@ async function fetchPlaceDetails(token, placeId) {
     displayPlaceDetails(place);
   } catch (error) {
     console.error('Error fetching place details:', error);
-    useFallbackOrError(placeId, 'Network error. Unable to load place details.');
+    useFallbackOrError(placeId, 'Erreur réseau. Impossible de charger les détails du logement.');
   }
 }
 
@@ -868,13 +932,13 @@ function displayPlaceDetails(place) {
     return;
   }
 
-  const name = place.name || 'Unnamed place';
-  const description = place.description || 'No description available';
-  const price = place.price_by_night ?? place.price ?? 'N/A';
-  const host = place.host || place.host_name || place.owner || 'Unknown host';
-  const location = place.city || place.location || 'Unknown location';
+  const name = place.name || 'Logement sans titre';
+  const description = place.description || 'Aucune description disponible';
+  const price = place.price_by_night ?? place.price ?? 'Prix indisponible';
+  const host = place.host || place.host_name || place.owner || 'Propriétaire inconnu';
+  const location = place.city || place.location || 'Ville inconnue';
   const rating = place.rating || null;
-  const image = place.image || place.image_url || place.photo || pickFallbackImage();
+  const image = place.image_url || place.image || place.photo || pickFallbackImage();
   const details = place.details || place.detail || null;
   const maxGuests = place.maxGuests || place.max_guests || null;
   const availableFrom = place.availableFrom || place.available_from || null;
@@ -885,7 +949,7 @@ function displayPlaceDetails(place) {
 
   const amenitiesHtml = amenities.length > 0
     ? amenities.map(function (a) { return `<span class="amenity-pill detail-amenity">${a}</span>`; }).join('')
-    : '<p class="no-data-note">No amenities listed.</p>';
+    : '<p class="no-data-note">Aucun équipement renseigné.</p>';
 
   let reviewSummaryHtml = '';
   if (reviewStats) {
@@ -897,15 +961,15 @@ function displayPlaceDetails(place) {
         <div class="review-summary-overall">
           <span class="review-overall-score">${reviewStats.overall.toFixed(2)}</span>
           <div class="review-overall-stars">${starsHtml}</div>
-          <p class="review-overall-count">${count} review${count !== 1 ? 's' : ''}</p>
+          <p class="review-overall-count">${count} avis${count !== 1 ? '' : ''}</p>
         </div>
         <div class="review-summary-stats">
-          ${statBar('Cleanliness', reviewStats.cleanliness)}
-          ${statBar('Accuracy', reviewStats.accuracy)}
-          ${statBar('Check-in', reviewStats.checkin)}
+          ${statBar('Propreté', reviewStats.cleanliness)}
+          ${statBar('Exactitude', reviewStats.accuracy)}
+          ${statBar('Arrivée', reviewStats.checkin)}
           ${statBar('Communication', reviewStats.communication)}
-          ${statBar('Location', reviewStats.location)}
-          ${statBar('Value', reviewStats.value)}
+          ${statBar('Localisation', reviewStats.location)}
+          ${statBar('Rapport qualité/prix', reviewStats.value)}
         </div>
       </div>`;
   }
@@ -936,7 +1000,7 @@ function displayPlaceDetails(place) {
         </article>`;
     }).join('');
   } else {
-    reviewCardsHtml = '<p class="no-data-note">No reviews yet. Be the first to share your experience!</p>';
+    reviewCardsHtml = '<p class="no-data-note">Aucun avis pour le moment. Soyez le premier à partager votre expérience !</p>';
   }
 
   const reviewsHtml = reviewSummaryHtml + (reviewList.length > 0 ? `<div class="detail-reviews">${reviewCardsHtml}</div>` : reviewCardsHtml);
@@ -948,7 +1012,7 @@ function displayPlaceDetails(place) {
   const mapBodyHtml = `
     <p class="detail-location-meta">${locationMeta}</p>
     <div id="map" class="detail-map"></div>
-    <p id="map-unavailable-msg" class="no-data-note" style="display:none;">Location map unavailable.</p>`;
+    <p id="map-unavailable-msg" class="no-data-note" style="display:none;">Carte de localisation indisponible.</p>`;
 
   const ratingBadge = rating
     ? `<span class="detail-rating-badge">★ ${rating}</span>`
@@ -959,11 +1023,11 @@ function displayPlaceDetails(place) {
     : '';
 
   const guestsLine = maxGuests
-    ? `<p class="detail-guests">Up to ${maxGuests} guest${maxGuests > 1 ? 's' : ''}</p>`
+    ? `<p class="detail-guests">Jusqu'à ${maxGuests} voyageur${maxGuests > 1 ? 's' : ''}</p>`
     : '';
 
   const availabilityHtml = (availableFrom && availableTo)
-    ? `<p class="detail-availability">Available ${availableFrom} – ${availableTo}</p>`
+    ? `<p class="detail-availability">Disponible ${availableFrom} – ${availableTo}</p>`
     : '';
 
   container.innerHTML = `
@@ -980,23 +1044,23 @@ function displayPlaceDetails(place) {
       ${guestsLine}
       ${availabilityHtml}
       <div class="detail-price-host">
-        <span class="detail-price">$${price}<span class="detail-price-unit"> / night</span></span>
-        <span class="detail-host">Hosted by <strong>${host}</strong></span>
+        <span class="detail-price">$${price}<span class="detail-price-unit"> / nuit</span></span>
+        <span class="detail-host">Hébergé par <strong>${host}</strong></span>
       </div>
       <div class="detail-section">
-        <h2 class="detail-section-title">About this place</h2>
+        <h2 class="detail-section-title">À propos de ce logement</h2>
         <p class="detail-description">${description}</p>
       </div>
       <div class="detail-section">
-        <h2 class="detail-section-title">What this place offers</h2>
+        <h2 class="detail-section-title">Équipements</h2>
         <div class="detail-amenities">${amenitiesHtml}</div>
       </div>
       <div class="detail-section">
-        <h2 class="detail-section-title">Guest reviews</h2>
+        <h2 class="detail-section-title">Avis des voyageurs</h2>
         ${reviewsHtml}
       </div>
       <div class="detail-section">
-        <h2 class="detail-section-title">Where the property is located</h2>
+        <h2 class="detail-section-title">Localisation du logement</h2>
         ${mapBodyHtml}
       </div>
     </div>
@@ -1018,7 +1082,7 @@ function initMap(place) {
     mapEl.style.display = 'none';
     if (unavailableMsg) {
       unavailableMsg.style.display = 'block';
-      unavailableMsg.textContent = 'Location map unavailable.';
+      unavailableMsg.textContent = 'Carte de localisation indisponible.';
     }
     return;
   }
@@ -1032,7 +1096,7 @@ function initMap(place) {
     mapEl.style.display = 'none';
     if (unavailableMsg) {
       unavailableMsg.style.display = 'block';
-      unavailableMsg.textContent = 'Location map unavailable.';
+      unavailableMsg.textContent = 'Carte de localisation indisponible.';
     }
     return;
   }
@@ -1074,7 +1138,7 @@ function initPlacePage() {
   const placeId = getPlaceIdFromURL();
 
   if (!placeId) {
-    displayPlaceError('No place ID provided in URL.');
+    displayPlaceError('Aucun ID de logement fourni dans l\'URL.');
     return;
   }
 
@@ -1090,7 +1154,7 @@ function initPlacePage() {
 /* ===== ADD REVIEW PAGE ===== */
 
 function checkAuthenticationReview() {
-  const token = getCookie('token');
+  const token = getCookie('access_token');
 
   if (!token) {
     window.location.href = 'index.html';
@@ -1107,6 +1171,17 @@ function displayReviewError(message) {
     errorContainer.textContent = message;
     errorContainer.style.display = 'block';
   }
+}
+
+function checkAuthenticationCreatePlace() {
+  const token = getCookie('access_token');
+
+  if (!token) {
+    window.location.href = 'login.html';
+    return null;
+  }
+
+  return token;
 }
 
 function clearReviewError() {
@@ -1138,7 +1213,7 @@ function clearReviewSuccess() {
 
 async function submitReview(token, placeId, reviewData) {
   try {
-    const response = await fetch(`${PLACES_ENDPOINT}${placeId}/reviews`, {
+    const response = await fetch(`${API_BASE_URL}/reviews/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1155,12 +1230,12 @@ async function submitReview(token, placeId, reviewData) {
     }
 
     if (!response.ok) {
-      const errorMessage = data.message || 'Failed to submit review.';
+      const errorMessage = data.error || data.message || 'Failed to submit review.';
       displayReviewError(errorMessage);
       return;
     }
 
-    displayReviewSuccess('Review submitted successfully! Redirecting...');
+    displayReviewSuccess('Avis envoyé avec succès ! Redirection en cours...');
 
     const reviewForm = document.getElementById('review-form');
     if (reviewForm) {
@@ -1172,7 +1247,7 @@ async function submitReview(token, placeId, reviewData) {
     }, 1500);
   } catch (error) {
     console.error('Error submitting review:', error);
-    displayReviewError('Network error. Unable to submit review.');
+    displayReviewError('Erreur réseau. Impossible d\'envoyer l\'avis.');
   }
 }
 
@@ -1201,20 +1276,21 @@ function setupReviewForm(token, placeId) {
     const commentValue = commentInput.value.trim();
 
     if (!ratingValue || !commentValue) {
-      displayReviewError('All fields are required.');
+      displayReviewError('Tous les champs sont obligatoires.');
       return;
     }
 
     const ratingNum = parseInt(ratingValue, 10);
 
     if (Number.isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
-      displayReviewError('Rating must be between 1 and 5.');
+      displayReviewError('La note doit être entre 1 et 5.');
       return;
     }
 
     const reviewData = {
+      place_id: placeId,
       rating: ratingNum,
-      comment: commentValue
+      text: commentValue
     };
 
     submitReview(token, placeId, reviewData);
@@ -1231,7 +1307,7 @@ function initAddReviewPage() {
   const placeId = getPlaceIdFromURL();
 
   if (!placeId) {
-    displayReviewError('No place ID provided in URL.');
+    displayReviewError('Aucun ID de logement fourni dans l\'URL.');
     return;
   }
 
@@ -1246,6 +1322,21 @@ function initAddReviewPage() {
 /* ===== PAGE INITIALIZATION ===== */
 
 document.addEventListener('DOMContentLoaded', function () {
+  // Preload amenities cache for UUID-to-name mapping
+  preloadAmenitiesCache();
+
+  // Apply auth state (show/hide Login & Logout) on every page
+  checkAuthentication();
+
+  // Wire logout button present on any page
+  const logoutBtn = document.getElementById('logout-link');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      logout();
+    });
+  }
+
   const loginForm = document.getElementById('login-form');
   if (loginForm) {
     initLoginPage();
@@ -1253,7 +1344,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
   const placesList = document.getElementById('places-list');
   if (placesList) {
-    checkAuthentication();
     setupBookingDates();
     setupTravelersSelector();
     setupQuickFilters();
@@ -1271,4 +1361,362 @@ document.addEventListener('DOMContentLoaded', function () {
   if (reviewForm) {
     initAddReviewPage();
   }
+
+  const registerForm = document.getElementById('register-form');
+  if (registerForm) {
+    initRegisterPage();
+  }
+
+  const createPlaceForm = document.getElementById('create-place-form');
+  if (createPlaceForm) {
+    initCreatePlacePage();
+  }
 });
+
+/* ===== REGISTER PAGE ===== */
+
+function initRegisterPage() {
+  const form = document.getElementById('register-form');
+
+  form.addEventListener('submit', async function (event) {
+    event.preventDefault();
+
+    const errorBox = document.getElementById('error-message');
+    const successBox = document.getElementById('success-message');
+
+    if (errorBox) { errorBox.style.display = 'none'; errorBox.textContent = ''; }
+    if (successBox) { successBox.style.display = 'none'; successBox.textContent = ''; }
+
+    const firstName = document.getElementById('first_name').value.trim();
+    const lastName = document.getElementById('last_name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
+
+    if (!firstName || !lastName || !email || !password) {
+      showBox(errorBox, 'Tous les champs sont obligatoires.');
+      return;
+    }
+
+    try {
+      const response = await fetch(REGISTER_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          first_name: firstName,
+          last_name: lastName,
+          email: email,
+          password: password
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        showBox(errorBox, data.error || data.message || 'Erreur lors de l\'inscription.');
+        return;
+      }
+
+      // Auto-login: store JWT and redirect
+      const token = data.access_token || data.token;
+      if (token) {
+        setCookie('access_token', token);
+      }
+
+      showBox(successBox, 'Compte créé ! Redirection en cours...');
+      setTimeout(() => { window.location.href = 'index.html'; }, 1500);
+
+    } catch (err) {
+      console.error('Register error:', err);
+      showBox(errorBox, 'Erreur réseau. Veuillez réessayer.');
+    }
+  });
+}
+
+function showBox(el, message) {
+  if (el) {
+    el.textContent = message;
+    el.style.display = 'block';
+  }
+}
+
+/* ===== CREATE PLACE PAGE ===== */
+
+// Handle image upload preview
+function initImageUpload() {
+  const imageInput = document.getElementById('image-upload');
+  const previewDiv = document.getElementById('image-preview');
+  const previewImg = document.getElementById('preview-img');
+  const removeBtn = document.getElementById('remove-image-btn');
+  const uploadStatus = document.getElementById('upload-status');
+
+  if (!imageInput) return;
+
+  imageInput.addEventListener('change', function (e) {
+    const file = e.target.files[0];
+
+    if (!file) {
+      previewDiv.style.display = 'none';
+      uploadStatus.textContent = '';
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      uploadStatus.textContent = 'Veuillez sélectionner une image valide.';
+      uploadStatus.style.color = '#ef4444';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      uploadStatus.textContent = 'L\'image est trop volumineux (max 5MB).';
+      uploadStatus.style.color = '#ef4444';
+      imageInput.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (event) {
+      previewImg.src = event.target.result;
+      previewDiv.style.display = 'block';
+      uploadStatus.textContent = 'Image sélectionnée - elle sera uploadée avec l\'annonce';
+      uploadStatus.style.color = '#16A34A';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  if (removeBtn) {
+    removeBtn.addEventListener('click', function () {
+      imageInput.value = '';
+      previewDiv.style.display = 'none';
+      uploadStatus.textContent = '';
+    });
+  }
+}
+
+async function uploadPlaceImage(file, token) {
+  if (!file) return null;
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const uploadUrl = `${API_BASE_URL.split('/api/v1')[0]}/api/v1/upload`;
+    console.log('Uploading to:', uploadUrl);
+
+    const response = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      console.error('Upload error response:', data);
+      throw new Error(data.error || 'Upload failed');
+    }
+
+    const data = await response.json();
+    console.log('Upload successful, image_url:', data.image_url);
+    return data.image_url;
+  } catch (err) {
+    console.error('Image upload error:', err);
+    throw err;
+  }
+}
+
+async function fetchAndRenderAmenities() {
+  const container = document.getElementById('amenities-list');
+  if (!container) return;
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/amenities/`);
+    if (!response.ok) {
+      container.innerHTML = '<p style="color:#717171;font-size:14px;">Impossible de charger les équipements.</p>';
+      return;
+    }
+    const amenities = await response.json();
+    if (!amenities || amenities.length === 0) {
+      container.innerHTML = '<p style="color:#717171;font-size:14px;">Aucun équipement disponible.</p>';
+      return;
+    }
+    container.innerHTML = amenities.map(function (a) {
+      return `<label style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border:1px solid #ddd;border-radius:999px;font-size:13px;cursor:pointer;user-select:none;">
+        <input type="checkbox" name="amenity" value="${a.id}" style="accent-color:#008489;"> ${a.name}
+      </label>`;
+    }).join('');
+  } catch (err) {
+    console.warn('Could not load amenities:', err);
+    container.innerHTML = '<p style="color:#717171;font-size:14px;">Impossible de charger les équipements.</p>';
+  }
+}
+
+function initCreatePlacePage() {
+  const token = checkAuthenticationCreatePlace();
+  if (!token) {
+    return;
+  }
+
+  fetchAndRenderAmenities();
+  initImageUpload();
+
+  // Geocode button — converts address to lat/lng via Nominatim (OpenStreetMap)
+  const geocodeBtn = document.getElementById('geocode-btn');
+  if (geocodeBtn) {
+    geocodeBtn.addEventListener('click', async function () {
+      const address = document.getElementById('address').value.trim();
+      const feedback = document.getElementById('location-feedback');
+      const errorBox = document.getElementById('error-message');
+
+      if (!address) {
+        showBox(errorBox, 'Veuillez d\'abord entrer une adresse.');
+        return;
+      }
+
+      geocodeBtn.textContent = '...';
+      geocodeBtn.disabled = true;
+
+      try {
+        const nominatimUrl = 'https://nominatim.openstreetmap.org/search'
+          + `?q=${encodeURIComponent(address)}`
+          + '&format=json&limit=1&addressdetails=1';
+
+        const response = await fetch(nominatimUrl, {
+          headers: { 'Accept-Language': 'en' }
+        });
+        const results = await response.json();
+
+        if (!results || results.length === 0) {
+          showBox(errorBox, 'Adresse non trouvée. Essayez une adresse plus précise.');
+          geocodeBtn.textContent = 'Localiser';
+          geocodeBtn.disabled = false;
+          return;
+        }
+
+        const result = results[0];
+        const lat = parseFloat(result.lat);
+        const lon = parseFloat(result.lon);
+        const addrObj = result.address || {};
+        const city = addrObj.city || addrObj.town || addrObj.village
+          || addrObj.municipality || '';
+        const country = addrObj.country || '';
+
+        document.getElementById('latitude').value = lat;
+        document.getElementById('longitude').value = lon;
+
+        const cityEl = document.getElementById('city');
+        const countryEl = document.getElementById('country');
+        if (cityEl) cityEl.value = city;
+        if (countryEl) countryEl.value = country;
+
+        if (feedback) {
+          feedback.textContent = `Localisation confirmée : ${result.display_name}`;
+          feedback.style.display = 'block';
+        }
+        if (errorBox) { errorBox.style.display = 'none'; errorBox.textContent = ''; }
+
+      } catch (err) {
+        console.error('Geocoding error:', err);
+        showBox(document.getElementById('error-message'),
+          'Impossible de contacter le service de localisation. Vérifiez votre connexion.');
+      }
+
+      geocodeBtn.textContent = 'Localiser';
+      geocodeBtn.disabled = false;
+    });
+  }
+
+  // Form submission
+  const form = document.getElementById('create-place-form');
+
+  form.addEventListener('submit', async function (event) {
+    event.preventDefault();
+
+    const errorBox = document.getElementById('error-message');
+    const successBox = document.getElementById('success-message');
+
+    if (errorBox) { errorBox.style.display = 'none'; errorBox.textContent = ''; }
+    if (successBox) { successBox.style.display = 'none'; successBox.textContent = ''; }
+
+    const title = document.getElementById('title').value.trim();
+    const description = document.getElementById('description').value.trim();
+    const price = parseFloat(document.getElementById('price').value);
+    const latitude = parseFloat(document.getElementById('latitude').value);
+    const longitude = parseFloat(document.getElementById('longitude').value);
+
+    const selectedAmenityIds = Array.from(
+      document.querySelectorAll('input[name="amenity"]:checked')
+    ).map(function (cb) { return cb.value; });
+
+    if (!title) {
+      showBox(errorBox, 'Veuillez entrer un titre.');
+      return;
+    }
+    if (isNaN(price) || price <= 0) {
+      showBox(errorBox, 'Veuillez entrer un prix valide.');
+      return;
+    }
+    if (isNaN(latitude) || isNaN(longitude)) {
+      showBox(errorBox, 'Veuillez d\'abord utiliser le bouton "Localiser" pour valider votre adresse.');
+      return;
+    }
+
+    try {
+      const imageInput = document.getElementById('image-upload');
+      let imageUrl = null;
+
+      // Upload image if selected
+      if (imageInput && imageInput.files.length > 0) {
+        try {
+          imageUrl = await uploadPlaceImage(imageInput.files[0], token);
+          if (imageUrl) {
+            document.getElementById('image-url').value = imageUrl;
+            console.log('Image URL set in hidden field:', imageUrl);
+          }
+        } catch (uploadErr) {
+          showBox(errorBox, 'Erreur lors de l\'upload de l\'image. Veuillez réessayer.');
+          return;
+        }
+      }
+
+      const placePayload = {
+        title,
+        description,
+        price,
+        latitude,
+        longitude,
+        amenities: selectedAmenityIds,
+        image_url: imageUrl
+      };
+
+      console.log('Creating place with payload:', placePayload);
+
+      const response = await fetch(PLACES_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify(placePayload)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error('Create place error response:', data);
+        showBox(errorBox, data.error || data.message || 'Erreur lors de la création de l\'annonce.');
+        return;
+      }
+
+      console.log('Place created successfully:', data);
+      showBox(successBox, 'Annonce créée ! Redirection en cours...');
+      setTimeout(function () {
+        window.location.href = `place.html?id=${data.id}`;
+      }, 1500);
+
+    } catch (err) {
+      console.error('Create place error:', err);
+      showBox(errorBox, 'Erreur réseau. Veuillez réessayer.');
+    }
+  });
+}
