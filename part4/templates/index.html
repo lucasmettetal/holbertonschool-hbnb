@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="HBnB - Discover and book amazing places">
+    <link rel="icon" href="{{ url_for('static', filename='icon.png') }}" type="image/png">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <title>HBnB - Home</title>
+</head>
+
+<body>
+    <header>
+        <div class="header-container">
+            <a href="index.html" class="brand" aria-label="HBnB Home">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="HBnB Logo" class="logo">
+            </a>
+            <nav class="main-nav">
+                <a href="index.html" class="nav-home">Home</a>
+            </nav>
+            <div class="header-actions">
+                <a href="login.html" id="login-link" class="login-button">Login</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero-section container">
+            <div class="hero-copy">
+                <p class="eyebrow">Handpicked stays across Europe</p>
+                <h1>Discover premium places to stay</h1>
+                <p class="subtitle">Search refined rentals, compare details quickly and find your next stay with less friction.</p>
+            </div>
+
+            <div id="error-message"
+                style="display: none; color: #FF5A5F; margin-bottom: 20px; padding: 12px; background-color: #FFE0E0; border-radius: 6px; text-align: center; font-weight: 500;">
+            </div>
+
+            <div class="booking-shell">
+                <div class="booking-bar" role="search" aria-label="Booking search">
+                    <div class="booking-field field-destination">
+                        <label for="search-input">Destination</label>
+                        <input id="search-input" class="booking-input" type="search"
+                            placeholder="City, listing, description" aria-label="Destination search">
+                    </div>
+
+                    <div class="booking-field field-checkin">
+                        <label for="check-in-date">Check-in</label>
+                        <input id="check-in-date" class="booking-input" type="date" aria-label="Check-in date">
+                    </div>
+
+                    <div class="booking-field field-checkout">
+                        <label for="check-out-date">Check-out</label>
+                        <input id="check-out-date" class="booking-input" type="date" aria-label="Check-out date">
+                    </div>
+
+                    <div class="booking-field field-travelers">
+                        <label for="travelers-select">Travelers</label>
+                        <select id="travelers-select" class="booking-input" aria-label="Number of travelers">
+                            <option value="1">1 traveler</option>
+                            <option value="2">2 travelers</option>
+                            <option value="3">3 travelers</option>
+                            <option value="4">4 travelers</option>
+                            <option value="5+">5+ travelers</option>
+                        </select>
+                    </div>
+
+                    <div class="booking-action">
+                        <button id="booking-search-btn" type="button" class="booking-search-button">Search</button>
+                    </div>
+                </div>
+
+                <div class="filter-rail">
+                    <p id="nights-count" class="nights-count" aria-live="polite"></p>
+
+                    <div class="quick-filters" aria-label="Quick amenities filters">
+                        <button type="button" class="quick-filter-chip" data-amenity="Wifi">Wifi</button>
+                        <button type="button" class="quick-filter-chip" data-amenity="Pool">Pool</button>
+                        <button type="button" class="quick-filter-chip" data-amenity="Parking">Parking</button>
+                        <button type="button" class="quick-filter-chip" data-amenity="Air conditioning">Air conditioning</button>
+                        <button type="button" class="quick-filter-chip" data-amenity="Balcony">Balcony</button>
+                        <button type="button" class="quick-filter-chip" data-amenity="Pets allowed">Pets allowed</button>
+                    </div>
+
+                    <div class="quick-filters-panel">
+                        <label for="price-filter" class="filter-label">Max price</label>
+                        <select id="price-filter" class="filter-select">
+                            <option value="all">All prices</option>
+                            <option value="50">Up to $50</option>
+                            <option value="100">Up to $100</option>
+                            <option value="200">Up to $200</option>
+                            <option value="350">Up to $350</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-heading">
+                <h2>Featured listings</h2>
+                <p>Curated rentals with clear pricing, quick details and premium presentation.</p>
+            </div>
+
+            <div id="places-list" class="places-grid">
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>All rights reserved.</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+</body>
+
+</html>
