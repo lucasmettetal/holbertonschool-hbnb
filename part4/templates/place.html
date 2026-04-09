@@ -7,41 +7,49 @@
     <meta name="description" content="HBnB - Place Details">
     <link rel="icon" href="{{ url_for('static', filename='icon.png') }}" type="image/png">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <title>HBnB - Place Details</title>
 </head>
 
 <body>
     <header>
         <div class="header-container">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="HBnB Logo" class="logo">
-            <nav>
-                <a href="index.html">Home</a>
-                <a href="login.html" class="login-button">Login</a>
+            <a href="index.html" class="brand" aria-label="HBnB Home">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="HBnB Logo" class="logo">
+            </a>
+            <nav class="main-nav">
+                <a href="index.html" class="nav-home">Home</a>
             </nav>
+            <div class="header-actions">
+                <a href="login.html" class="login-button">Login</a>
+            </div>
         </div>
     </header>
 
     <main>
-        <section class="place-details" id="place-details">
-        </section>
+        <div id="error-message"
+            style="display: none; color: #FF5A5F; margin-bottom: 24px; padding: 14px 18px; background-color: #FFE8E8; border-radius: 12px; text-align: center; font-weight: 500;">
+        </div>
 
-        <section id="add-review" style="margin: 40px auto; max-width: 1200px; padding: 20px;">
+        <section id="place-details" class="place-details"></section>
+
+        <section id="add-review" style="display: none;">
             <div class="review-action">
+                <p class="review-action-title">Share your experience</p>
+                <p class="review-action-sub">Stayed here? Let other travelers know what you thought.</p>
                 <a id="add-review-link" href="add_review.html" class="details-button"
-                    style="display: inline-block; text-decoration: none; background-color: #FF5A5F; color: white; padding: 12px 24px; border-radius: 6px; text-align: center; font-weight: 600;">Add
-                    Your Review</a>
+                    style="display: inline-flex; text-decoration: none;">
+                    Write a Review
+                </a>
             </div>
         </section>
-
-        <div id="error-message"
-            style="display: none; color: #FF5A5F; margin: 20px auto; max-width: 1200px; padding: 12px; background-color: #FFE0E0; border-radius: 6px; text-align: center; font-weight: 500;">
-        </div>
     </main>
 
     <footer>
         <p>All rights reserved.</p>
     </footer>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="{{ url_for('static', filename='scripts.js') }}"></script>
 </body>
 
